@@ -54,7 +54,8 @@ done
 if [[ $NMAP == "true" ]]; then
 echo " "
 echo "========== NMAP Scan results =========="
-journalctl |  awk '/scanlogd*/{print "Date of scan: "$3" From IP address: "$6}' | tail -n $NUMBER
+journalctl |  awk '/scanlogd.*ports/{print}' | tail -n $NUMBER
+#journalctl |  awk '/scanlogd*/{print "Date of scan: "$1" "$2" "$3" From IP address: "$6}' | tail -n $NUMBER
 fi
 if [[ $SSH == "true" ]]; then
 echo " "
