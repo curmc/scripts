@@ -1,0 +1,68 @@
+#!/bin/bash
+
+NMAP="false"
+SSH="false"
+NUMBER=3
+
+HELPDIALOGUE="
+Authentication checker (Must be run as root)
+
+USAGE:  sudo auth-history [OPTIONS]
+
+OPTIONS
+-h --help       show this menu
+-n --nmap       display nmap attempts
+-s --ssh        display ssh attempts and failures
+-t --number     history size for each (default 3)
+
+"
+if [ $# -eq 0 ]; then
+        printf "$HELPDIALOGUE"
+        exit 1
+fi
+
+while test $# -gt 0; do
+        case "$1" in
+                -h|--help)
+                        printf "$HELPDIALOGUE"
+                        exit 1
+                        ;;
+                -n|--nmap)
+                        shift
+                        NMAP="true"
+                        ;;
+                -s|--ssh)
+                        shift
+                        SSH="true"
+                        ;;
+                -t|--number)
+                        shift
+                        if test $# -gt 0; then
+                                NUMBER=$1
+                        else
+                                echo "invalid number"
+                                exit 1
+                        fi
+                        shift
+                        ;;
+                *)
+                        break
+                        ;;
+        esac
+done
+
+if [[ $NMAP == "true" ]]; then
+echo " "
+echo "========== NMAP Scan results =========="
+journalctl |  awk '/scanlogd*/{print "Date of scan: "$3" From IP address: "$6}' | tail -n $NUMBER
+fi
+if [[ $SSH == "true" ]]; then
+echo " "
+echo "========== SSHD Scan results =========="
+journalctl | awk '/sshd.*Accepted/{print "Date: "$1" "$2" "$3" IP: "$11" Logged in to user: "$9}' | tail -n $NUMBER
+echo " "
+sudo journalctl | awk '/sshd.*Authentication failure/{print $1" "$2" "$3" "$8" "$9" "$10" "$11" "$12" "$13" "$14" "$15}' | tail -n $NUMBER    
+fi
+echo " "
+echo " "
+
