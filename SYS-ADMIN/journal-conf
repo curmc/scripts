@@ -1,0 +1,98 @@
+#!/bin/bash
+
+keysMain=(SystemMaxUse SystemMaxFileSize SystemMaxFiles)
+valuesMain=(n n n)
+examples=("50M, 40M" "30M, 40M (this value should be lower than SystemMaxUse)" "1000 3000")
+
+
+
+show-help () {
+  printf "
+
+  journal-conf
+
+  -h --help         show this help menu
+
+  -d --default      run through the menu and select a size / number
+                    for each value in the journal configuration file
+                    enter n for default value
+                    
+                   \n"
+}
+
+main () {
+  for index in ${!keysMain[*]}
+  do
+    printf "%s \n     example: %s \n     n for default\n>>> " "${keysMain[$index]}" "${examples[$index]}"
+    read -r temp
+    if [ "$temp" == "n" ]; then
+      echo "here"
+      echo $temp
+      valuesMain[$index]="n"
+    else
+      valuesMain[$index]=$temp
+    fi
+  done
+
+  echo "[Journal]" > size.conf
+
+  for i in ${!valuesMain[*]}
+  do
+    if [ ${valuesMain[$i]} != "n" ]; then
+      echo "${keysMain[$i]}=${valuesMain[$i]}" >> size.conf
+    fi
+  done
+  echo "Please review the file you've just created (press any key to continue)"
+  read -r value
+  cat size.conf
+  echo ""
+  echo "Is this okay? [y/N]"
+  read -r value
+  if [ $value == "y" ]; then
+    sudo mkdir -p "/etc/systemd/journald.conf.d"
+    sudo chown root size.conf
+    if [ -f "/etc/systemd/journald.conf.d/size.conf" ]; then
+      sudo cp "/etc/systemd/journald.conf.d/size.conf" "/etc/systemd/journald.conf.d/size.conf.old"
+    fi
+    sudo mv size.conf "/etc/systemd/journald.conf.d"
+  else
+    exit 1
+  fi
+
+
+  printf "
+  size.conf written to /etc/systemd/journald.conf.d/size.conf
+
+  old size.conf written to size.conf.copy
+
+  review size.conf and make sure everything is correct, then restart journalctl
+
+  $ systemctl restart systemd-journald.service
+  \n"
+}
+
+if [ $# -eq 0 ]; then
+  show-help
+  exit 0
+fi
+
+
+while test $# -gt 0; do
+  case "$1" in
+    -h | --help)
+      show-help
+      exit 0
+      ;;
+    -d | --default)
+      echo "Using defaults for most trivial files"
+      main
+      exit 0
+      ;;
+     *)
+      break
+      ;;
+  esac
+done
+
+
+
